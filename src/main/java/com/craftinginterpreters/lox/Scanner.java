@@ -28,7 +28,30 @@ public class Scanner {
     /**
      * Saves parsed token from source.
      */
+
     private final List<Token> tokens;
+
+    private static final Map<String,TokenType> keywords;
+    static {
+        keywords = Map.ofEntries(Map.entry("and", AND),
+                Map.entry("class", CLASS),
+                Map.entry("else",ELSE),
+                Map.entry("false",FALSE),
+                Map.entry("for",FOR),
+                Map.entry("fun",FUN),
+                Map.entry("if",IF),
+                Map.entry("nil",NIL),
+                Map.entry("or",OR),
+                Map.entry("print",PRINT),
+                Map.entry("return",RETURN),
+                Map.entry("super",SUPER),
+                Map.entry("this",THIS),
+                Map.entry("true",TRUE),
+                Map.entry("var",VAR),
+                Map.entry("while",WHILE)
+
+        );
+    }
 
     public Scanner(String source) {
         this.source = source;
@@ -90,23 +113,30 @@ public class Scanner {
                 addToken(match('=') ? BANG_EQUAL : BANG);
                 break;
             case '=':
-                addToken(match('=') ? EQUAL_EQUAL : EQUAL);
+                addToken(match('=') ? EQUAL_EQUAL : EQUAL); break;
             case '>':
-                addToken(match('=') ? GREATER_EQUAL : GREATER);
+                addToken(match('=') ? GREATER_EQUAL : GREATER);break;
             case '<':
-                addToken(match('=') ? LESS_EQUAL : LESS);
+                addToken(match('=') ? LESS_EQUAL : LESS); break;
         // Ignore Comment
 
             case '/':
                 if (match('/')) {
                     // A comment goes until the end of the line.
                     while (peek() != '\n' && isAtEnd()) advance();
+                } else if (match('*')) {
+                    while (peek() != '*' && peekNext() != '/') {
+                        if(peek()=='\n') line++;
+                        advance();
+                    }
+                    advance();
+                    advance();
+
                 } else {
                     addToken(SLASH);
                 }
                 break;
                // Ignore whitespace
-
             case ' ':
             case '\r':
             case '\t':
@@ -117,12 +147,33 @@ public class Scanner {
             case '"':string();break;
             default:
                 if (isDigit(c)) {
-                   number(); 
-                }else{
+                   number();
+                } else if (isAlpha(c)) {
+                    identifier();
+                } else {
                     Lox.error(line, "Unexpected character.");
                 }
                 break;
         }
+    }
+
+    private void identifier() {
+        while(isAlphaNumberic(peek())) advance();
+        String text=source.substring(start,current);
+        TokenType type = keywords.get(text);
+        if(type==null) type=IDENTIFIER;
+        addToken(type);
+    }
+
+    private boolean isAlphaNumberic(char c) {
+        return isAlpha(c)|| isDigit(c);
+
+    }
+
+    private boolean isAlpha(char c) {
+        return (c>='a' && c<='z')||
+                (c>='A' && c<='Z')||
+                c=='_';
     }
 
     private void number() {
@@ -139,7 +190,7 @@ public class Scanner {
     }
 
     private char peekNext() {
-        //TODO 验证这段逻辑是否等价于 isAtEnd()
+        //Done 验证这段逻辑是否等价于 isAtEnd()
 //        if(current+1>=source.length()) return '\0';
         if(isAtEnd()) return '\0';
         return source.charAt(current + 1);
@@ -224,5 +275,9 @@ public class Scanner {
      */
     private boolean isAtEnd() {
         return current >= source.length();
+    }
+
+    public static void main(String[] args) {
+
     }
 }

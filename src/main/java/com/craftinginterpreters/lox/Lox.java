@@ -3,15 +3,21 @@ package com.craftinginterpreters.lox;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Lox {
     private static boolean hadError = false;
 
     public static void main(String[] args) throws IOException {
+        Path currentRelativePath = Paths.get("");
+        String s = currentRelativePath.toAbsolutePath().toString();
+        System.out.println("Current absolute path is: " + s);
         if (args.length > 1) {
             System.out.println("Usage: jlox [script]");
             System.exit(64);
@@ -24,13 +30,15 @@ public class Lox {
     }
 
     private static void runPrompt() throws IOException {
+        //TODO REPL cannot process multiple strings
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
 
         for (; ; ) {
             System.out.println("> ");
-            String line = reader.readLine();
-            if (line == null) {
+           var line= reader.readLine();
+
+            if (line.length()==0) {
                 break;
             }
             run(line);
