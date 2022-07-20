@@ -33,7 +33,8 @@ public class Scanner {
 
     private static final Map<String,TokenType> keywords;
     static {
-        keywords = Map.ofEntries(Map.entry("and", AND),
+        keywords = Map.ofEntries(
+                Map.entry("and", AND),
                 Map.entry("class", CLASS),
                 Map.entry("else",ELSE),
                 Map.entry("false",FALSE),
