@@ -1,0 +1,19 @@
+
+
+{
+  tokens=[number="regexp:\d+" string="regexp:\w+"]
+}
+// a == x?b==y?i:j:k
+// a==x?3*4:5==6
+ternary::= equality"?"ternary+":"ternary+
+expression ::= comma;
+comma ::= equality("," equality)*
+equality ::= comparison ( ("!=" | "==") comparison )*;
+comparison ::= term ((">"|">="|"<"|"<=") term )*;
+term ::= factor (("-"|"+") factor)*;
+factor ::=unary(("/"|"*")unary)*
+unary ::=("!"|"-") unary
+| primary
+primary ::= number|string|"true"|"false"|"nil"|"(" expression ")"
+
+

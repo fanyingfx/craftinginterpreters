@@ -109,6 +109,13 @@ public class Scanner {
             case '*':
                 addToken(STAR);
                 break;
+                // Ternary
+            case '?':
+                addToken(QUESTION);
+                break;
+            case ':':
+                addToken(COLON);
+                break;
                 // Equal Operators
             case '!':
                 addToken(match('=') ? BANG_EQUAL : BANG);
