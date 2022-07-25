@@ -6,46 +6,71 @@ package com.craftinginterpreters.lox;
  * @author fan
  * 7/22/22
  */
-public class Interpreter implements Expr.Visitor<Object>{
+public class Interpreter implements Expr.Visitor<Object> {
     @Override
     public Object visitBinaryExpr(Expr.Binary expr) {
         Object left = evaluate(expr.left);
         Object right = evaluate(expr.right);
         switch (expr.operator.type) {
             case MINUS:
-                return (double)left -(double) right;
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left - (double) right;
             case PLUS:
+                // todo support for implicitly add string, it's evil
                 if (left instanceof Double && right instanceof Double) {
-                    return (double)left + (double) right;
+                    return (double) left + (double) right;
+
                 }
                 if (left instanceof String && right instanceof String) {
                     return (String) left + (String) right;
                 }
+                throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
             case SLASH:
-                return (double)left / (double) right;
+                // todo how to handle division by zero
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left / (double) right;
             case STAR:
-                return (double)left * (double) right;
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left * (double) right;
+                // TODO support for comparing two different type like 3< "pancake"
             case GREATER:
-                return (double)left > (double) right;
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left > (double) right;
             case GREATER_EQUAL:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left >= (double) right;
             case LESS:
-                return (double)left<(double) right;
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left < (double) right;
             case LESS_EQUAL:
-                return (double)left<=(double) right;
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left <= (double) right;
             case BANG_EQUAL:
                 return !isEqual(left, right);
             case EQUAL_EQUAL:
                 return isEqual(left, right);
-                    
+
         }
         return null;
 
     }
 
+    private void checkNumberOperands(Token operator, Object left, Object right) {
+        if (left instanceof Double && right instanceof Double) {
+            return;
+        }
+        throw new RuntimeError(operator, "Oprands must be nubmers.");
+
+    }
+
+    private void checkNumberOperands(Token operator, Object operand) {
+        if (operand instanceof Double) return;
+        throw new RuntimeError(operator, "Operand must be a number.");
+    }
+
     private boolean isEqual(Object a, Object b) {
-        if(a==null && b==null) return true;
-        if(a==null) return false;
+        if (a == null && b == null) return true;
+        if (a == null) return false;
         return a.equals(b);
     }
 
@@ -56,6 +81,27 @@ public class Interpreter implements Expr.Visitor<Object>{
 
     Object evaluate(Expr expr) {
         return expr.accept(this);
+    }
+
+    void interpret(Expr expression) {
+        try {
+            Object value = evaluate(expression);
+            System.out.println(stringify(value));
+        } catch (RuntimeError error) {
+            Lox.runtimeError(error);
+        }
+    }
+
+    private String stringify(Object object) {
+        if (object == null) return "nil";
+        if (object instanceof Double) {
+            String text = object.toString();
+            if (text.endsWith(".0")) {
+                text = text.substring(0, text.length() - 2);
+            }
+            return text;
+        }
+        return object.toString();
     }
 
     @Override
@@ -70,14 +116,16 @@ public class Interpreter implements Expr.Visitor<Object>{
             case BANG:
                 return !isTruthy(right);
             case MINUS:
-                return -(double)right;
+                checkNumberOperands(expr.operator, right);
+                return -(double) right;
         }
         return null;
     }
 
     private boolean isTruthy(Object object) {
-        if(object==null) return false;
-        if(object instanceof Boolean) return (boolean) object;
+        if (object == null) return false;
+        if (object instanceof Boolean) return (boolean) object;
         return true;
     }
+
 }

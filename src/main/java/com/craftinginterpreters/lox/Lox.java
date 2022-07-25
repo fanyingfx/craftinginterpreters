@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Lox {
+    private static final Interpreter interpreter = new Interpreter();
     private static boolean hadError = false;
+    private static boolean hadRuntimeError = false;
 
     public static void main(String[] args) throws IOException {
         Path currentRelativePath = Paths.get("");
@@ -30,7 +32,7 @@ public class Lox {
     }
 
     private static void runPrompt() throws IOException {
-        //TODO REPL cannot process multiple strings
+        //TODO REPL cannot process multiple line strings
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
 
@@ -56,6 +58,7 @@ public class Lox {
         if (hadError) {
             System.exit(65);
         }
+       if(hadRuntimeError) System.exit(70);
 
     }
 
@@ -68,8 +71,9 @@ public class Lox {
         Parser parser = new Parser(tokens);
         Expr expression=parser.parse();
         if(hadError) return;
+        interpreter.interpret(expression);
 //        System.out.println(new AstPrinter().print(expression));
-        System.out.println(new Interpreter().evaluate(expression));
+//        System.out.println(new Interpreter().evaluate(expression));
 //        for (Token token : tokens) {
 //            System.out.println(token);
 //        }
@@ -90,5 +94,20 @@ public class Lox {
         } else {
             report(token.line, " at '"+token.lexeme+"'",message);
         }
+    }
+    public static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage()+
+                "\n[line " + error.token.line+"]");
+        hadRuntimeError=true;
+
+    }
+}
+
+class RuntimeError extends RuntimeException {
+    final Token token;
+
+    public RuntimeError(Token token, String message) {
+        super(message);
+        this.token = token;
     }
 }
