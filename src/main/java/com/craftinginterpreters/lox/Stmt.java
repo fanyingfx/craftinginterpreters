@@ -1,37 +1,64 @@
 package com.craftinginterpreters.lox;
 
+import java.util.List;
+
 abstract class Stmt {
-    interface Visitor<R> {
-        R visitExpressionStmt(Expression stmt);
+ interface Visitor<R> {
+ R visitBlockStmt(Block stmt);
+ R visitExpressionStmt(Expression stmt);
+ R visitPrintStmt(Print stmt);
+ R visitVarStmt(Var stmt);
+ }
+ static class Block extends Stmt {
+ Block(List<Stmt> statements) {
+ this.statements = statements;
+ }
 
-        R visitPrintStmt(Print stmt);
-    }
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+ return visitor.visitBlockStmt(this);
+ }
 
-    static class Expression extends Stmt {
-        Expression(Expr expression) {
-            this.expression = expression;
-        }
+ final List<Stmt> statements;
+ }
+ static class Expression extends Stmt {
+ Expression(Expr expression) {
+ this.expression = expression;
+ }
 
-        @Override
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitExpressionStmt(this);
-        }
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+ return visitor.visitExpressionStmt(this);
+ }
 
-        final Expr expression;
-    }
+ final Expr expression;
+ }
+ static class Print extends Stmt {
+ Print(Expr expression) {
+ this.expression = expression;
+ }
 
-    static class Print extends Stmt {
-        Print(Expr expression) {
-            this.expression = expression;
-        }
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+ return visitor.visitPrintStmt(this);
+ }
 
-        @Override
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitPrintStmt(this);
-        }
+ final Expr expression;
+ }
+ static class Var extends Stmt {
+ Var(Token name, Expr initializer) {
+ this.name = name;
+ this.initializer = initializer;
+ }
 
-        final Expr expression;
-    }
+ @Override
+ <R> R accept(Visitor<R> visitor) {
+ return visitor.visitVarStmt(this);
+ }
 
-    abstract <R> R accept(Visitor<R> visitor);
+ final Token name;
+ final Expr initializer;
+ }
+
+ abstract <R> R accept(Visitor<R> visitor);
 }

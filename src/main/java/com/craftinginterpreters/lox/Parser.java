@@ -27,15 +27,47 @@ public class Parser {
     List<Stmt> parse() {
         List<Stmt> statements = new ArrayList<>();
         while (!isAtEnd()) {
-            statements.add(statement());
+            statements.add(declaration());
         }
         return statements;
         
     }
 
+    private Stmt declaration() {
+        try{
+            if(match(VAR)){
+                return varDeclaration();
+            }
+            return statement();
+        }catch (ParserError error){
+            synchronize();
+            return null;
+        }
+    }
+    private Stmt varDeclaration(){
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+        Expr initializer = null;
+        if(match(EQUAL)){
+            initializer=expression();
+        }
+        consume(SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
+    }
+
     private Stmt statement() {
         if(match(PRINT)) return printStatement();
+        if(match(LEFT_BRACE)) return new Stmt.Block(block());
         return expressionStatement();
+    }
+
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(RIGHT_BRACE)&&!isAtEnd()) {
+            statements.add(declaration());
+
+        }
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
     }
 
     private Stmt expressionStatement() {
@@ -51,35 +83,49 @@ public class Parser {
     }
 
     private Expr expression() {
-        return comma();
+        return assignment();
     }
 
-
-    private Expr comma(){
-        Expr expr = ternary();
-        while (match(COMMA)){
-            Token operator = previous();
-            Expr right = ternary();
-            expr = new Expr.Binary(expr, operator, right);
-        }
-        return  expr;
-
-    }
-
-    private Expr ternary() {
-        Expr expr =equality();
-        while (match(QUESTION)) {
-            Token operator1 = previous();
-            Expr middle =ternary();
-            if(match(COLON)){
-                Token operator2 = previous();
-                Expr end =ternary();
-                expr= new Expr.Binary(expr,operator1,new Expr.Binary(middle,operator2,end));
-            }else
-                throw error(peek(), "Missing right colon expression.");
+    private Expr assignment() {
+        Expr expr = equality();
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+            error(equals, "Invalid assignment target.");
         }
         return expr;
     }
+
+
+//    private Expr comma(){
+//        Expr expr = ternary();
+//        while (match(COMMA)){
+//            Token operator = previous();
+//            Expr right = ternary();
+//            expr = new Expr.Binary(expr, operator, right);
+//        }
+//        return  expr;
+//
+//    }
+
+//    private Expr ternary() {
+//        Expr expr =equality();
+//        while (match(QUESTION)) {
+//            Token operator1 = previous();
+//            Expr middle =ternary();
+//            if(match(COLON)){
+//                Token operator2 = previous();
+//                Expr end =ternary();
+//                expr= new Expr.Binary(expr,operator1,new Expr.Binary(middle,operator2,end));
+//            }else
+//                throw error(peek(), "Missing right colon expression.");
+//        }
+//        return expr;
+//    }
 
     private Expr equality() {
         Expr expr = comparison();
@@ -143,6 +189,7 @@ public class Parser {
         if (match(TRUE)) return new Expr.Literal(true);
         if (match(NIL)) return new Expr.Literal(null);
         if (match(NUMBER, STRING)) return new Expr.Literal(previous().literal);
+        if (match(IDENTIFIER)) return new Expr.Variable(previous());
 
         if (match(LEFT_PAREN)) {
             Expr expr = expression();
