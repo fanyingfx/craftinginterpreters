@@ -62,6 +62,7 @@ public class Scanner {
 
     /**
      * Scan source from begin to end and add tokens
+     * If scan complete then add EOF the token list at the END.
      * @return The token list
      */
     public List<Token> scanTokens() {
