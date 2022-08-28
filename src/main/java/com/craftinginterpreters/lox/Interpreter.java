@@ -1,28 +1,49 @@
 package com.craftinginterpreters.lox;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author fan
  * 7/22/22
  */
-public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    public Interpreter() {
+        globals.define("clock", new LoxCallable() {
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
+            }
 
-    private Environment environment = new Environment();
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public String toString() {
+                return "<native fn>";
+            }
+        });
+    }
+
+    final Environment globals = new Environment();
+    private Environment environment = globals;
+
     @Override
     public Void visitVarStmt(Stmt.Var stmt) {
         Object value = null;
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
-        environment.define(stmt.name.lexeme,value);
+        environment.define(stmt.name.lexeme, value);
         return null;
     }
 
     @Override
     public Void visitWhileStmt(Stmt.While stmt) {
-        while (isTruthy(evaluate(stmt.condition))){
+        while (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.body);
         }
         return null;
@@ -35,15 +56,15 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
         return null;
     }
 
-    private void executeBlock(List<Stmt> statements, Environment environment) {
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
             this.environment = environment;
             for (Stmt statement : statements) {
                 execute(statement);
             }
-        }finally {
-            this.environment=previous;
+        } finally {
+            this.environment = previous;
         }
     }
 
@@ -54,10 +75,17 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
     }
 
     @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunction function = new LoxFunction(stmt,environment);
+        environment.define(stmt.name.lexeme,function);
+        return null;
+    }
+
+    @Override
     public Void visitIfStmt(Stmt.If stmt) {
-        if(isTruthy(evaluate(stmt.condition))){
+        if (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
-        }else if(stmt.elseBranch!=null){
+        } else if (stmt.elseBranch != null) {
             execute(stmt.elseBranch);
         }
         return null;
@@ -68,6 +96,16 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
         return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null) {
+            value = evaluate(stmt.value);
+        }
+        throw new Return(value);
+
     }
 
     @Override
@@ -102,7 +140,7 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
             case STAR:
                 checkNumberOperands(expr.operator, left, right);
                 return (double) left * (double) right;
-                // TODO support for comparing two different type like 3< "pancake"
+            // TODO support for comparing two different type like 3< "pancake"
             case GREATER:
                 checkNumberOperands(expr.operator, left, right);
                 return (double) left > (double) right;
@@ -124,6 +162,26 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
         return null;
 
     }
+
+    @Override
+    public Object visitCallExpr(Expr.Call expr) {
+        // 一般而言，表达式的值只是标识符，根据名字来查找函数的，不过可以是任何值
+        Object callee = evaluate(expr.callee);
+        List<Object> arguments = new ArrayList<>();
+        for (Expr argument : expr.arguments) {
+            // 递归求值
+            arguments.add(evaluate(argument));
+        }
+        if (!(callee instanceof LoxCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions and classed.");
+        }
+        LoxCallable function = (LoxCallable) callee;
+        if (arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren, "Expected " + function.arity() + " arguments but got " + arguments.size() + ".");
+        }
+        return function.call(this, arguments);
+    }
+
     private boolean isEqual(Object a, Object b) {
         if (a == null && b == null) return true;
         if (a == null) return false;
@@ -172,11 +230,11 @@ public class Interpreter implements Expr.Visitor<Object> ,Stmt.Visitor<Void>{
 
     @Override
     public Object visitLogicalExpr(Expr.Logical expr) {
-        Object left =evaluate(expr.left);
-        if(expr.operator.type==TokenType.OR){
-            if(isTruthy(left)) return left;
-        }else{
-            if(!isTruthy(left)) return left;
+        Object left = evaluate(expr.left);
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left)) return left;
+        } else {
+            if (!isTruthy(left)) return left;
         }
         return evaluate(expr.right);
 
